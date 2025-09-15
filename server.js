@@ -4,15 +4,21 @@ import { ApolloServer } from "apollo-server-express";
 import { makeExecutableSchema } from "@graphql-tools/schema";
 import { WebSocketServer } from "ws";
 import { useServer } from "graphql-ws/use/ws"; 
+import dotenv from "dotenv";
+import { connectDB } from "./config/database.js";
+import { typeDefsUser } from "./typeDefs/user.typeDefs.js";
+import { resolverUser } from "./resolvers/resolverUser.js";
+// connect db
+connectDB();
 
-import { typeDefs } from "./schema/typeDefs.js";
-import { resolvers } from "./schema/resolvers.js";
-
-const schema = makeExecutableSchema({ typeDefs, resolvers });
-
+const schema = makeExecutableSchema({ 
+  typeDefs:[typeDefsUser],
+  resolvers: [resolverUser]
+});
 const app = express();
 const httpServer = createServer(app);
 
+// Apollo Server
 const apolloServer = new ApolloServer({ schema });
 await apolloServer.start();
 apolloServer.applyMiddleware({ app });
