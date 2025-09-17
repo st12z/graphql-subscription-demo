@@ -4,9 +4,12 @@
 - Tải dependency
 ```
 npm init -y
-npm install apollo-server-express express@4 graphql graphql-subscriptions graphql-ws ws @graphql-tools/schema
+npm install apollo-server-express express@4 graphql graphql-subscriptions graphql-ws ws @graphql-tools/schema mongoose mongodb nodemon dotenv
+
 
 ```
+- Tao account mongodb: (https://cloud.mongodb.com/) và get connect string connect database on mongodb cloud then copy link to .env
+- Tao file .env: MONGO_URI=mongodb+srv://db_user:db_password@cluster0.nm5xt.mongodb.net/database_name
 - Start : 
 ```
 npm start
