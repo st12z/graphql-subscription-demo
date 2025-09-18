@@ -1,4 +1,5 @@
 import User from "../models/user.model.js";
+import jwt from "jsonwebtoken";
 import { pubsub, EVENTS } from "../pubsub.js";
 import { DateScalar } from "../scalar/graphql-scalar-type.js";
 export const resolverUser = {
@@ -75,22 +76,32 @@ export const resolverUser = {
     // Tìm danh sách bạn bè của người dùng
     // publish sự kiện đến tất cả bạn bè -> trả về subscription loginUser gồm danh sách bạn bè của người đăng nhập và userLoginId
     loginUser: async (_, { username, password }) => {
-      const user = await User.findOne({ username, password });
-      if (!user) {
+      const user = await User.findOne({ username });
+      if (!user || user.password !== password) {
         throw new Error("Invalid username or password");
       }
+
       user.status = "active";
       user.timeOnl = new Date();
       await user.save();
-      const users = await User.find({ _id: { $in: user.isFriends || [] } });
-      
+
+      const friends = await User.find({ _id: { $in: user.isFriends || [] } });
+
+      const token = jwt.sign({ userId: user.id }, "secret_key");
+
       pubsub.publish(EVENTS.USER_LOGIN, {
         loginUser: {
-          friends: users,
+          friends,
           userLoginId: user.id,
         },
       });
-      return user;
+
+      return {
+        id: user.id,
+        username: user.username,
+        avatar: user.avatar,
+        token,
+      };
     },
   },
   Subscription: {

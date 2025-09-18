@@ -5,6 +5,7 @@ import { makeExecutableSchema } from "@graphql-tools/schema";
 import { WebSocketServer } from "ws";
 import { useServer } from "graphql-ws/use/ws"; 
 import dotenv from "dotenv";
+import jwt from "jsonwebtoken";
 import { connectDB } from "./config/database.js";
 import { typeDefsUser } from "./typeDefs/user.typeDefs.js";
 import { resolverUser } from "./resolvers/resolverUser.js";
@@ -19,7 +20,20 @@ const app = express();
 const httpServer = createServer(app);
 
 // Apollo Server
-const apolloServer = new ApolloServer({ schema });
+const apolloServer = new ApolloServer({ 
+  schema,
+  context: ({ req }) => {
+    const authHeader = req?.headers?.authorization || '';
+    const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : authHeader;
+    if (!token) return {};
+    try {
+      const payload = jwt.verify(token, 'secret_key');
+      return { userId: payload.userId };
+    } catch (e) {
+      return {};
+    }
+  }
+});
 await apolloServer.start();
 apolloServer.applyMiddleware({ app });
 
