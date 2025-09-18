@@ -92,7 +92,6 @@ export const resolverUser = {
         return payload.friendRequested.userAcceptId === args.userAcceptId
           ? payload.friendRequested
           : null;
-
       },
     },
     friendAccepted: {
