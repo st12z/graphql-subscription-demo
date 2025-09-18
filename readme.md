@@ -24,3 +24,7 @@ npm start
     - ![alt text](image.png)
   - Subsription listening realtime:
     - ![alt text](image-1.png)
+- Login: thêm session, trả về client ID, username, avatar
+- addFriend: bỏ userSendID, lấy từ session
+- thêm db chat, room_chat
+- thêm chức năng khi đăng nhập tb cho friend
