@@ -12,11 +12,10 @@ export const typeDefsUser = gql`
     timeOnl: Date
   }
 
-  type LoginResponse {
+  type LoginUserResponse {
     id: ID!
     username: String!
     avatar: String
-    token: String!
   }
 
   type Query {
@@ -25,8 +24,8 @@ export const typeDefsUser = gql`
 
   type Mutation {
     createUser(username: String!,password: String): User!
-    addFriend(userSendId: ID!, userAcceptId: ID!): [User]
-    loginUser(username: String!, password: String!): LoginResponse
+    addFriend(userAcceptId: ID!): [User!]
+    loginUser(username: String!, password: String!): LoginUserResponse!
     acceptFriend(userSendId: ID!, userAcceptId: ID!): [User]
   }
   type FriendPayload {

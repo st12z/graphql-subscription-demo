@@ -1,5 +1,4 @@
 import User from "../models/user.model.js";
-import jwt from "jsonwebtoken";
 import { pubsub, EVENTS } from "../pubsub.js";
 import { DateScalar } from "../scalar/graphql-scalar-type.js";
 export const resolverUser = {
@@ -24,26 +23,28 @@ export const resolverUser = {
     // requestFriends của người gửi lưu id người nhận
     // acceptFriends của người nhận lưu id người gửi
     // publish sự kiện đến người nhận -> trả về subscription một object friendRequested gồm userAcceptId, userSendId
-    addFriend: async (_, { userSendId, userAcceptId }) => {
-      const user = await User.findOne({ _id: userSendId });
+    addFriend: async (_, { userSendId, userAcceptId }, context) => {
+      if (!context.userId) {
+        throw new Error("Unauthorized");
+      }
+      const user = await User.findOne({ _id: context.userId });
       const friend = await User.findOne({ _id: userAcceptId });
       if (!user || !friend) {
         throw new Error("User or friend not found");
       }
       if (
         !user.isFriends.includes(userAcceptId) &&
-        !friend.isFriends.includes(userSendId) &&
+        !friend.isFriends.includes(context.userId) &&
         !user.acceptFriends.includes(userAcceptId) &&
-        !friend.acceptFriends.includes(userSendId) &&
-        !user.requestFriends.includes(userSendId) &&
-        !friend.requestFriends.includes(userSendId)
+        !friend.acceptFriends.includes(context.userId) &&
+        !user.requestFriends.includes(context.userId) &&
+        !friend.requestFriends.includes(context.userId)
       ) {
         user.requestFriends.push(userAcceptId);
-        friend.acceptFriends.push(userSendId);
-        await user.save();
-        await friend.save();
+        friend.acceptFriends.push(context.userId);
+        await Promise.all([user.save(), friend.save()]);
         pubsub.publish(EVENTS.FRIEND_ADDED, {
-          friendRequested: { userSendId, userAcceptId },
+          friendRequested: { userSendId: context.userId, userAcceptId },
         });
         return [user, friend];
       }
@@ -75,7 +76,7 @@ export const resolverUser = {
     // Nếu đúng, thay đổi status thành active, timeOnl thành thời gian hiện tại
     // Tìm danh sách bạn bè của người dùng
     // publish sự kiện đến tất cả bạn bè -> trả về subscription loginUser gồm danh sách bạn bè của người đăng nhập và userLoginId
-    loginUser: async (_, { username, password }) => {
+    loginUser: async (_, { username, password }, context) => {
       const user = await User.findOne({ username });
       if (!user || user.password !== password) {
         throw new Error("Invalid username or password");
@@ -86,8 +87,9 @@ export const resolverUser = {
       await user.save();
 
       const friends = await User.find({ _id: { $in: user.isFriends || [] } });
-
-      const token = jwt.sign({ userId: user.id }, "secret_key");
+      if (context?.req?.session) {
+        context.req.session.userId = user.id;
+      }
 
       pubsub.publish(EVENTS.USER_LOGIN, {
         loginUser: {
@@ -100,7 +102,6 @@ export const resolverUser = {
         id: user.id,
         username: user.username,
         avatar: user.avatar,
-        token,
       };
     },
   },
