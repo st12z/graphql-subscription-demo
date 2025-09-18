@@ -3,7 +3,6 @@
 - Clone repo về máy
 - cd graphql-demo
 - Tải dependency
-  hello
 
 ```
 npm init -y
@@ -25,3 +24,4 @@ npm start
     - ![alt text](image.png)
   - Subsription listening realtime:
     - ![alt text](image-1.png)
+

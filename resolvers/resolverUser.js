@@ -10,6 +10,8 @@ export const resolverUser = {
     },
   },
   Mutation: {
+    // tạo tài khoản người dùng và publish sự kiện người dùng mới được tạo -> trả về cho subscription danh sách 
+    // người dùng mới nhất
     createUser: async (_, { username, password }) => {
       const user = new User({ username, password });
       await user.save();
@@ -17,6 +19,10 @@ export const resolverUser = {
       pubsub.publish(EVENTS.MODEL_CREATED, { getListUsers: users });
       return user;
     },
+    // Thêm bạn bè. Nhận vào 2 tham số userSenđI, userAcceptId. 
+    // requestFriends của người gửi lưu id người nhận
+    // acceptFriends của người nhận lưu id người gửi
+    // publish sự kiện đến người nhận -> trả về subscription một object friendRequested gồm userAcceptId, userSendId
     addFriend: async (_, { userSendId, userAcceptId }) => {
       const user = await User.findOne({ _id: userSendId });
       const friend = await User.findOne({ _id: userAcceptId });
@@ -41,6 +47,10 @@ export const resolverUser = {
         return [user, friend];
       }
     },
+    // Chấp nhận lời mời kết bạn. Nhận vào 2 tham số userSendId, userAcceptId
+    // isFriends của cả 2 người thêm id của nhau
+    // Loại bỏ id của người nhận trong requestFriends của người gửi và id của người gửi trong acceptFriends của người nhận
+    // publish sự kiện đến người gửi -> trả về subscription một object friendAccepted gồm userAcceptId, userSendId
     acceptFriend: async (_, { userSendId, userAcceptId }) => {
       const user = await User.findOne({ _id: userSendId });
       const friend = await User.findOne({ _id: userAcceptId });
@@ -60,6 +70,10 @@ export const resolverUser = {
         return [user, friend];
       }
     },
+    // Đăng nhập người dùng. Nhận vào username, password
+    // Nếu đúng, thay đổi status thành active, timeOnl thành thời gian hiện tại
+    // Tìm danh sách bạn bè của người dùng
+    // publish sự kiện đến tất cả bạn bè -> trả về subscription loginUser gồm danh sách bạn bè của người đăng nhập và userLoginId
     loginUser: async (_, { username, password }) => {
       const user = await User.findOne({ username, password });
       if (!user) {
@@ -80,9 +94,13 @@ export const resolverUser = {
     },
   },
   Subscription: {
+    // lắng nghe sự kiện người dùng mới được tạo và trả về danh sách người dùng mới nhất
     getListUsers: {
       subscribe: () => pubsub.asyncIterableIterator(EVENTS.MODEL_CREATED),
     },
+    // người nhận lắng nghe sự kiện có lời mời kết bạn mới. 
+    // Kiểm tra userAcceptId trong payload có khớp với userAcceptId trong args không (Đối số là tham số mình truyển lắng nghe ở applo server)
+
     friendRequested: {
       subscribe: (_, { userAcceptId }) =>
         pubsub.asyncIterableIterator(EVENTS.FRIEND_ADDED),
@@ -94,6 +112,8 @@ export const resolverUser = {
           : null;
       },
     },
+    // người gửi lắng nghe sự kiện lời mời kết bạn được chấp nhận
+    // Kiểm tra userSendId trong payload có khớp với userSendId trong args không (Đối số là tham số mình truyển lắng nghe ở applo server)
     friendAccepted: {
       subscribe: (_, { userSendId }) =>
         pubsub.asyncIterableIterator(EVENTS.FRIEND_ADDED),
@@ -106,6 +126,8 @@ export const resolverUser = {
       },
 
     },
+    // lắng nghe sự kiện có người dùng đăng nhập
+    // Kiểm tra xem người hiện tại có phải là bạn bè của người đăng nhập không -> nếu có thì trả về userLoginId
     loginUser: {
       subscribe: (_, { userId }) => pubsub.asyncIterableIterator(EVENTS.USER_LOGIN),
       resolve: (payload, args) => {
