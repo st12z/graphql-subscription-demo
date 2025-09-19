@@ -1,4 +1,5 @@
 import User from "../models/user.model.js";
+import jwt from "jsonwebtoken";
 import { pubsub, EVENTS } from "../pubsub.js";
 import { DateScalar } from "../scalar/graphql-scalar-type.js";
 export const resolverUser = {
@@ -23,7 +24,7 @@ export const resolverUser = {
     // requestFriends của người gửi lưu id người nhận
     // acceptFriends của người nhận lưu id người gửi
     // publish sự kiện đến người nhận -> trả về subscription một object friendRequested gồm userAcceptId, userSendId
-    addFriend: async (_, { userSendId, userAcceptId }, context) => {
+    addFriend: async (_, { userAcceptId }, context) => {
       if (!context.userId) {
         throw new Error("Unauthorized");
       }
@@ -86,15 +87,16 @@ export const resolverUser = {
       user.timeOnl = new Date();
       await user.save();
 
-      const friends = await User.find({ _id: { $in: user.isFriends || [] } });
-      if (context?.req?.session) {
-        context.req.session.userId = user.id;
-      }
+      const users = await User.find({ _id: { $in: user.isFriends || [] } }).select('id username avatar');
+
+      const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET, { expiresIn: '1h' });
 
       pubsub.publish(EVENTS.USER_LOGIN, {
         loginUser: {
-          friends,
+          friends: users,
           userLoginId: user.id,
+          username: user.username,
+          avatar: user.avatar,
         },
       });
 
@@ -102,6 +104,7 @@ export const resolverUser = {
         id: user.id,
         username: user.username,
         avatar: user.avatar,
+        token,
       };
     },
   },
@@ -143,14 +146,17 @@ export const resolverUser = {
     loginUser: {
       subscribe: (_, { userId }) => pubsub.asyncIterableIterator(EVENTS.USER_LOGIN),
       resolve: (payload, args) => {
-        console.log("friends: ",payload.loginUser.friends)
-        console.log("userId in args: ",args.userId)
-        // Chỉ trả về nếu userId trong args nằm trong danh sách bạn bè của người vừa login
         const isFriend = payload.loginUser.friends.some(
           (friend) => friend.id === args.userId
         );
-        console.log(isFriend)
-        return isFriend ? payload.loginUser.userLoginId : null;
+        return isFriend
+          ? {
+              id: payload.loginUser.userLoginId,
+              username: payload.loginUser.username,
+              avatar: payload.loginUser.avatar,
+              online: true,
+            }
+          : null;
       },
     },
   },

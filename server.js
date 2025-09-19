@@ -5,30 +5,36 @@ import { makeExecutableSchema } from "@graphql-tools/schema";
 import { WebSocketServer } from "ws";
 import { useServer } from "graphql-ws/use/ws"; 
 import dotenv from "dotenv";
-import session from "express-session";
+import jwt from "jsonwebtoken";
 import { connectDB } from "./config/database.js";
 import { typeDefsUser } from "./typeDefs/user.typeDefs.js";
 import { resolverUser } from "./resolvers/resolverUser.js";
 // connect db
 connectDB();
+dotenv.config();
 
 const schema = makeExecutableSchema({ 
   typeDefs:[typeDefsUser],
   resolvers: [resolverUser]
 });
 const app = express();
-// session middleware trước ApolloServer
-app.use(session({
-  secret: 'your_session_secret',
-  resave: false,
-  saveUninitialized: true
-}));
 const httpServer = createServer(app);
 
 // Apollo Server
 const apolloServer = new ApolloServer({ 
   schema,
-  context: ({ req }) => ({ userId: req.session?.userId || null, req })
+  context: ({ req }) => {
+    const auth = req?.headers?.authorization || '';
+    const token = auth.startsWith('Bearer ') ? auth.slice(7) : auth;
+    try {
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      console.log('context.userId:', decoded.userId);
+      return { userId: decoded.userId };
+    } catch (e) {
+      console.log('context.userId: null');
+      return { userId: null };
+    }
+  }
 });
 await apolloServer.start();
 apolloServer.applyMiddleware({ app });
