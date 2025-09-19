@@ -24,16 +24,21 @@ npm start
     - ![alt text](image.png)
   - Subsription listening realtime:
     - ![alt text](image-1.png)
+- userId cần truyền vào context trong tham số để lấy userId như phần **loginUser ở **Mutation và **loginUser ở Subscription
 - Login: 
-  - thêm jwt token, trả về client ID, username, avatar
-  - subscription loginUser: bỏ userId lấy từ jwt token
+  - thêm jwt token, trả về client ID, username, avatar → đã xong
+  - subscription loginUser: bỏ userId lấy từ jwt token → đã xong
 - Logout:
-  - bạn bè của người đó sẽ biết người đó logout->tạo subscription lắng nghe chính userId của mình để đợi người đăng xuất trả về danh sách bạn bè rồi kiểm tra mình có phải bạn bè người đó không 
+  - bạn bè của người đó sẽ biết người đó logout->tạo subscription lắng nghe chính userId (lấy từ token) của mình để đợi thông tin người đăng xuất trả về danh sách bạn bè rồi kiểm tra mình có phải bạn bè người đó không → chưa làm
 - addFriend: 
-  - bỏ userSendID, lấy từ jwt token 
-  - subscription: friendRequested cũng phải bỏ userAcceptId lấy từ jwt token
+  - bỏ userSendID, lấy từ jwt token → chưa làm việc bỏ userSendId
+  - subscription: friendRequested cũng phải bỏ userAcceptId lấy từ jwt token → chưa làm việc bỏ userAcceptId
 - acceptFriend:
-  - bỏ userAcceptId, lấy từ jwt token
-  - subscription: friendAccepted cũng phải bỏ userSendId
-- thêm db chat, room_chat
-- thêm chức năng khi đăng nhập tb cho friend
+  - bỏ userAcceptId, lấy từ jwt token → chưa làm
+  - khi chấp nhận thành công tạo phòng chat cho 2 người, xem thông tin model đã tạo ở file room_chat.model.js
+  - subscription: friendAccepted cũng phải bỏ userSendId→ chưa làm
+- thêm db chat, room_chat → đã xong
+- thêm chức năng khi đăng nhập tb cho friend → đã xong
+- Chức năng chat → chưa làm
+
+
