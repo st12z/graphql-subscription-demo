@@ -11,7 +11,7 @@ export const resolverUser = {
     },
   },
   Mutation: {
-    // tạo tài khoản người dùng và publish sự kiện người dùng mới được tạo -> trả về cho subscription danh sách 
+    // tạo tài khoản người dùng và publish sự kiện người dùng mới được tạo -> trả về cho subscription danh sách
     // người dùng mới nhất
     createUser: async (_, { username, password }) => {
       const user = new User({ username, password });
@@ -20,7 +20,7 @@ export const resolverUser = {
       pubsub.publish(EVENTS.MODEL_CREATED, { getListUsers: users });
       return user;
     },
-    // Thêm bạn bè. Nhận vào 2 tham số userSenđI, userAcceptId. 
+    // Thêm bạn bè. Nhận vào 2 tham số userSenđI, userAcceptId.
     // requestFriends của người gửi lưu id người nhận
     // acceptFriends của người nhận lưu id người gửi
     // publish sự kiện đến người nhận -> trả về subscription một object friendRequested gồm userAcceptId, userSendId
@@ -60,11 +60,18 @@ export const resolverUser = {
       if (!user || !friend) {
         throw new Error("User or friend not found");
       }
-      if(!user.isFriends.includes(userAcceptId) && !friend.isFriends.includes(userSendId)){
+      if (
+        !user.isFriends.includes(userAcceptId) &&
+        !friend.isFriends.includes(userSendId)
+      ) {
         user.isFriends.push(userAcceptId);
         friend.isFriends.push(userSendId);
-        user.requestFriends = user.requestFriends.filter(id => id !== userAcceptId);
-        friend.acceptFriends = friend.acceptFriends.filter(id => id !== userSendId);
+        user.requestFriends = user.requestFriends.filter(
+          (id) => id !== userAcceptId
+        );
+        friend.acceptFriends = friend.acceptFriends.filter(
+          (id) => id !== userSendId
+        );
         await user.save();
         await friend.save();
         pubsub.publish(EVENTS.FRIEND_ADDED, {
@@ -77,7 +84,7 @@ export const resolverUser = {
     // Nếu đúng, thay đổi status thành active, timeOnl thành thời gian hiện tại
     // Tìm danh sách bạn bè của người dùng
     // publish sự kiện đến tất cả bạn bè -> trả về subscription loginUser gồm danh sách bạn bè của người đăng nhập và userLoginId
-    loginUser: async (_, { username, password }, context) => {
+    loginUser: async (_, { username, password }) => {
       const user = await User.findOne({ username });
       if (!user || user.password !== password) {
         throw new Error("Invalid username or password");
@@ -87,16 +94,21 @@ export const resolverUser = {
       user.timeOnl = new Date();
       await user.save();
 
-      const users = await User.find({ _id: { $in: user.isFriends || [] } }).select('id username avatar');
+      const users = await User.find({
+        _id: { $in: user.isFriends || [] },
+      }).select("id username avatar");
 
-      const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET, { expiresIn: '1h' });
-
+      const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET, {
+        expiresIn: "1h",
+      });
       pubsub.publish(EVENTS.USER_LOGIN, {
         loginUser: {
           friends: users,
-          userLoginId: user.id,
-          username: user.username,
-          avatar: user.avatar,
+          user: {
+            id: user.id,
+            status: user.status,
+            timeOnl: user.timeOnl,
+          },
         },
       });
 
@@ -104,7 +116,12 @@ export const resolverUser = {
         id: user.id,
         username: user.username,
         avatar: user.avatar,
-        token,
+        status: user.status,
+        timeOnl: user.timeOnl,
+        acceptFriends: user.acceptFriends,
+        requestFriends: user.requestFriends,
+        isFriends: user.isFriends,
+        token: token,
       };
     },
   },
@@ -113,7 +130,7 @@ export const resolverUser = {
     getListUsers: {
       subscribe: () => pubsub.asyncIterableIterator(EVENTS.MODEL_CREATED),
     },
-    // người nhận lắng nghe sự kiện có lời mời kết bạn mới. 
+    // người nhận lắng nghe sự kiện có lời mời kết bạn mới.
     // Kiểm tra userAcceptId trong payload có khớp với userAcceptId trong args không (Đối số là tham số mình truyển lắng nghe ở applo server)
 
     friendRequested: {
@@ -139,24 +156,26 @@ export const resolverUser = {
           ? payload.friendAccepted
           : null;
       },
-
     },
     // lắng nghe sự kiện có người dùng đăng nhập
     // Kiểm tra xem người hiện tại có phải là bạn bè của người đăng nhập không -> nếu có thì trả về userLoginId
+
     loginUser: {
-      subscribe: (_, { userId }) => pubsub.asyncIterableIterator(EVENTS.USER_LOGIN),
-      resolve: (payload, args) => {
+      subscribe: async (_, __, context) => {
+        const userId = context.userId;
+        if (!userId) {
+          throw new Error("Unauthorized");
+        }
+        // user.id ở đây lấy từ token
+        return pubsub.asyncIterableIterator(EVENTS.USER_LOGIN);
+      },
+      resolve: (payload, _, context) => {
+        // user.id từ token
+        const userId = context.userId;
         const isFriend = payload.loginUser.friends.some(
-          (friend) => friend.id === args.userId
+          (friend) => friend.id === userId
         );
-        return isFriend
-          ? {
-              id: payload.loginUser.userLoginId,
-              username: payload.loginUser.username,
-              avatar: payload.loginUser.avatar,
-              online: true,
-            }
-          : null;
+        return isFriend ? payload.loginUser.user : null;
       },
     },
   },

@@ -8,17 +8,11 @@ export const typeDefsUser = gql`
     avatar: String
     requestFriends: [ID]
     acceptFriends: [ID]
+    status: String!
     isFriends: [ID]
     timeOnl: Date
+    token: String
   }
-
-  type LoginUserResponse {
-    id: ID!
-    username: String!
-    avatar: String
-    token: String!
-  }
-
   type Query {
     getListUsers: [User]
   }
@@ -26,7 +20,7 @@ export const typeDefsUser = gql`
   type Mutation {
     createUser(username: String!,password: String): User!
     addFriend(userAcceptId: ID!): [User!]
-    loginUser(username: String!, password: String!): LoginUserResponse!
+    loginUser(username: String!, password: String!): User!
     acceptFriend(userSendId: ID!, userAcceptId: ID!): [User]
   }
   type FriendPayload {
@@ -36,14 +30,13 @@ export const typeDefsUser = gql`
   type Subscription {
     getListUsers: [User]
     friendRequested(userAcceptId: ID!): FriendPayload
-    loginUser(userId: ID!): UserLoginInfo
+    loginUser: UserLoginInfo
     friendAccepted(userSendId: ID!): FriendPayload
   }
 
   type UserLoginInfo {
     id: ID!
-    username: String!
-    avatar: String
-    online: Boolean!
+    status: String!
+    timeOnl: Date
   }
 `;
