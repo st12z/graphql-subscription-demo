@@ -25,20 +25,31 @@ npm start
   - Subsription listening realtime:
     - ![alt text](image-1.png)
 - userId cần truyền vào context trong tham số để lấy userId như phần **loginUser ở **Mutation và **loginUser ở Subscription
-- Login: 
-  - thêm jwt token, trả về client ID, username, avatar → đã xong
-  - subscription loginUser: bỏ userId lấy từ jwt token → đã xong
-- Logout:
-  - bạn bè của người đó sẽ biết người đó logout->tạo subscription lắng nghe chính userId (lấy từ token) của mình để đợi thông tin người đăng xuất trả về danh sách bạn bè rồi kiểm tra mình có phải bạn bè người đó không → chưa làm
-- addFriend: 
-  - bỏ userSendID, lấy từ jwt token → chưa làm việc bỏ userSendId
-  - subscription: friendRequested cũng phải bỏ userAcceptId lấy từ jwt token → chưa làm việc bỏ userAcceptId
-- acceptFriend:
-  - bỏ userAcceptId, lấy từ jwt token → chưa làm
-  - khi chấp nhận thành công tạo phòng chat cho 2 người, xem thông tin model đã tạo ở file room_chat.model.js
-  - subscription: friendAccepted cũng phải bỏ userSendId→ chưa làm
-- thêm db chat, room_chat → đã xong
-- thêm chức năng khi đăng nhập tb cho friend → đã xong
-- Chức năng chat → chưa làm
+# Todo List
+
+## **Trường**
+- [x] userId cần truyền vào context trong tham số để lấy userId như phần **loginUser** ở Mutation và Subscription
+- [x] **Login**
+  - [x] thêm JWT token, trả về client ID, username, avatar
+  - [x] Subscription `loginUser`: bỏ userId, lấy từ JWT token
+- [ ] **Logout**
+  - [ ] Bạn bè của người đó sẽ biết người đó logout
+  - [ ] Tạo subscription lắng nghe chính userId (lấy từ token) để đợi thông tin người đăng xuất, trả về danh sách bạn bè rồi kiểm tra mình có phải bạn bè người đó không
+- [ ] **addFriend**
+  - [ ] Bỏ userSendID, lấy từ JWT token
+  - [ ] Subscription `friendRequested`: bỏ userAcceptId, lấy từ JWT token
+
+---
+
+## **Khánh**
+- [ ] **acceptFriend**
+  - [ ] Bỏ userAcceptId, lấy từ JWT token
+  - [ ] Khi chấp nhận thành công tạo phòng chat cho 2 người (theo model trong `chat.model.js`)
+  - [ ] Subscription `friendAccepted`: bỏ userSendId
+- [x] Thêm DB `chat`, `room_chat`
+- [x] Thêm chức năng khi đăng nhập thì thông báo cho bạn bè
+---
+- [ ] **Chat**
+  - [ ] Chức năng chat
 
 
