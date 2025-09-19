@@ -1,5 +1,6 @@
 import { subscribe } from "graphql";
 import User from "../models/user.model.js";
+import RoomChat from "../models/room_chat.model.js";
 import jwt from "jsonwebtoken";
 import { pubsub, EVENTS } from "../pubsub.js";
 import { DateScalar } from "../scalar/graphql-scalar-type.js";
@@ -51,29 +52,39 @@ export const resolverUser = {
         return [user, friend];
       }
     },
-    // Chấp nhận lời mời kết bạn. Nhận vào 2 tham số userSendId, userAcceptId
+    // Chấp nhận lời mời kết bạn. Chỉ nhận userSendId, userAcceptId lấy từ context.userId
     // isFriends của cả 2 người thêm id của nhau
     // Loại bỏ id của người nhận trong requestFriends của người gửi và id của người gửi trong acceptFriends của người nhận
     // publish sự kiện đến người gửi -> trả về subscription một object friendAccepted gồm userAcceptId, userSendId
-    acceptFriend: async (_, { userSendId, userAcceptId }) => {
+    acceptFriend: async (_, { userSendId }, context) => {
+      if (!context.userId) {
+        throw new Error("Unauthorized: Please login");
+      }
       const user = await User.findOne({ _id: userSendId });
-      const friend = await User.findOne({ _id: userAcceptId });
+      const friend = await User.findOne({ _id: context.userId });
       if (!user || !friend) {
         throw new Error("User or friend not found");
       }
-      if (!user.isFriends.includes(userAcceptId) && !friend.isFriends.includes(userSendId)) {
-        user.isFriends.push(userAcceptId);
+      if (!user.isFriends.includes(context.userId) && !friend.isFriends.includes(userSendId)) {
+        user.isFriends.push(context.userId);
         friend.isFriends.push(userSendId);
         user.requestFriends = user.requestFriends.filter(
-          (id) => id !== userAcceptId
+          (id) => id !== context.userId
         );
         friend.acceptFriends = friend.acceptFriends.filter(
           (id) => id !== userSendId
         );
-        await user.save();
-        await friend.save();
+        await Promise.all([user.save(), friend.save()]);
+
+        const [userAID, userBID] = [userSendId, context.userId].sort();
+        const roomChat = new RoomChat({
+          userAID,
+          userBID,
+        });
+        await roomChat.save();
+        console.log("Created RoomChat id:", roomChat.id);
         pubsub.publish(EVENTS.FRIEND_ADDED, {
-          friendAccepted: { userSendId, userAcceptId },
+          friendAccepted: { userSendId, userAcceptId: context.userId },
         });
         return [user, friend];
       }
@@ -168,16 +179,10 @@ export const resolverUser = {
       },
     },
     // người gửi lắng nghe sự kiện lời mời kết bạn được chấp nhận
-    // Kiểm tra userSendId trong payload có khớp với userSendId trong args không (Đối số là tham số mình truyển lắng nghe ở applo server)
     friendAccepted: {
-      subscribe: (_, { userSendId }) =>
-        pubsub.asyncIterableIterator(EVENTS.FRIEND_ADDED),
-      resolve: (payload, args) => {
-        // Chỉ gửi nếu người nhận đúng
-        console.log(payload);
-        return payload.friendAccepted.userSendId === args.userSendId
-          ? payload.friendAccepted
-          : null;
+      subscribe: () => pubsub.asyncIterableIterator(EVENTS.FRIEND_ADDED),
+      resolve: (payload) => {
+        return payload.friendAccepted;
       },
     },
     // lắng nghe sự kiện có người dùng đăng nhập

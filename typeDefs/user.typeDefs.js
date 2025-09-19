@@ -21,7 +21,7 @@ export const typeDefsUser = gql`
     createUser(username: String!,password: String): User!
     addFriend(userAcceptId: ID!): [User!]
     loginUser(username: String!, password: String!): User!
-    acceptFriend(userSendId: ID!, userAcceptId: ID!): [User]
+    acceptFriend(userSendId: ID!): [User!]!
     logoutUser: User!
   }
   type FriendPayload {
@@ -32,7 +32,7 @@ export const typeDefsUser = gql`
     getListUsers: [User]
     friendRequested(userAcceptId: ID!): FriendPayload
     loginUser: UserLoginInfo
-    friendAccepted(userSendId: ID!): FriendPayload
+    friendAccepted: FriendPayload
     logoutUser(userId: ID!): ID
   }
 
