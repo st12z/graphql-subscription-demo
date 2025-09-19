@@ -16,6 +16,7 @@ export const typeDefsUser = gql`
     id: ID!
     username: String!
     avatar: String
+    token: String!
   }
 
   type Query {
@@ -35,7 +36,14 @@ export const typeDefsUser = gql`
   type Subscription {
     getListUsers: [User]
     friendRequested(userAcceptId: ID!): FriendPayload
-    loginUser(userId: ID!): ID
+    loginUser(userId: ID!): UserLoginInfo
     friendAccepted(userSendId: ID!): FriendPayload
+  }
+
+  type UserLoginInfo {
+    id: ID!
+    username: String!
+    avatar: String
+    online: Boolean!
   }
 `;
