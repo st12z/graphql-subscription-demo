@@ -1,3 +1,4 @@
+import { subscribe } from "graphql";
 import User from "../models/user.model.js";
 import jwt from "jsonwebtoken";
 import { pubsub, EVENTS } from "../pubsub.js";
@@ -60,10 +61,7 @@ export const resolverUser = {
       if (!user || !friend) {
         throw new Error("User or friend not found");
       }
-      if (
-        !user.isFriends.includes(userAcceptId) &&
-        !friend.isFriends.includes(userSendId)
-      ) {
+      if (!user.isFriends.includes(userAcceptId) && !friend.isFriends.includes(userSendId)) {
         user.isFriends.push(userAcceptId);
         friend.isFriends.push(userSendId);
         user.requestFriends = user.requestFriends.filter(
@@ -124,6 +122,31 @@ export const resolverUser = {
         token: token,
       };
     },
+    logoutUser: async (_, __, context) => {
+      if (!context.userId) throw new Error("Unauthorized");
+
+      const user = await User.findById(context.userId);
+      if (!user) throw new Error("User not found");
+      user.status = "deactive";
+      user.timeOnl = new Date();
+      await user.save();
+
+      const friends = await User.find({ _id: { $in: user.isFriends || [] } });
+      pubsub.publish(EVENTS.USER_LOGOUT, {
+        logoutUser: {
+          friends,
+          userLogoutId: user.id,
+        }
+      })
+      return {
+        id: user.id,
+        username: user.username,
+        avatar: user.avatar,
+        status: user.status,
+        timeOnl: user.timeOnl,
+        token: null,
+      };
+    }
   },
   Subscription: {
     // lắng nghe sự kiện người dùng mới được tạo và trả về danh sách người dùng mới nhất
@@ -161,22 +184,26 @@ export const resolverUser = {
     // Kiểm tra xem người hiện tại có phải là bạn bè của người đăng nhập không -> nếu có thì trả về userLoginId
 
     loginUser: {
-      subscribe: async (_, __, context) => {
-        const userId = context.userId;
-        if (!userId) {
-          throw new Error("Unauthorized");
-        }
-        // user.id ở đây lấy từ token
-        return pubsub.asyncIterableIterator(EVENTS.USER_LOGIN);
-      },
-      resolve: (payload, _, context) => {
-        // user.id từ token
-        const userId = context.userId;
+      subscribe: (_, { userId }) => pubsub.asyncIterableIterator(EVENTS.USER_LOGIN),
+      resolve: (payload, args) => {
+        console.log("friends: ", payload.loginUser.friends)
+        console.log("userId in args: ", args.userId)
+        // Chỉ trả về nếu userId trong args nằm trong danh sách bạn bè của người vừa login
         const isFriend = payload.loginUser.friends.some(
           (friend) => friend.id === userId
         );
         return isFriend ? payload.loginUser.user : null;
       },
     },
+    logoutUser: {
+      subscribe: () => pubsub.asyncIterableIterator(EVENTS.USER_LOGOUT),
+      resolve: (payload, args) => {
+        const isFriend = payload.logoutUser.friends.some(
+          (friend) => friend.id === args.userId
+        );
+        console.log(isFriend)
+        return isFriend ? payload.logoutUser.userLogoutId : null;
+      }
+    }
   },
 };

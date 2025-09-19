@@ -5,12 +5,12 @@ import { DateScalar } from "../scalar/graphql-scalar-type.js";
 export const resolveChat = {
   Date: DateScalar,
   Query: {
-    
+
   },
   Mutation: {
-    
+
   },
   Subscription: {
-   
+
   },
 };
