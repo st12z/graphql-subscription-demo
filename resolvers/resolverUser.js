@@ -180,9 +180,13 @@ export const resolverUser = {
     },
     // người gửi lắng nghe sự kiện lời mời kết bạn được chấp nhận
     friendAccepted: {
-      subscribe: () => pubsub.asyncIterableIterator(EVENTS.FRIEND_ADDED),
-      resolve: (payload) => {
-        return payload.friendAccepted;
+      subscribe: (_,{userSendId}) => 
+        pubsub.asyncIterableIterator(EVENTS.FRIEND_ADDED),
+      resolve: (payload,args) => {
+        console.log("payload: ", payload)
+        return payload.friendAccepted.userSendId === args.userSendId
+          ? payload.friendAccepted
+          : null;
       },
     },
     // lắng nghe sự kiện có người dùng đăng nhập

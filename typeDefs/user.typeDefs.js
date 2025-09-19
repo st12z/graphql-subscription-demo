@@ -32,7 +32,7 @@ export const typeDefsUser = gql`
     getListUsers: [User]
     friendRequested(userAcceptId: ID!): FriendPayload
     loginUser: UserLoginInfo
-    friendAccepted: FriendPayload
+    friendAccepted(userSendId: ID!): FriendPayload
     logoutUser(userId: ID!): ID
   }
 
