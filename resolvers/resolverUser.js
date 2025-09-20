@@ -180,11 +180,11 @@ export const resolverUser = {
     },
     // người gửi lắng nghe sự kiện lời mời kết bạn được chấp nhận
     friendAccepted: {
-      subscribe: (_,{userSendId}) => 
+      subscribe: () => 
         pubsub.asyncIterableIterator(EVENTS.FRIEND_ADDED),
-      resolve: (payload,args) => {
+      resolve: (payload, args, context) => {
         console.log("payload: ", payload)
-        return payload.friendAccepted.userSendId === args.userSendId
+        return payload.friendAccepted.userSendId === context.userId
           ? payload.friendAccepted
           : null;
       },
