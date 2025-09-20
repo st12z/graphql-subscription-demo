@@ -170,10 +170,11 @@ export const resolverUser = {
     friendRequested: {
       subscribe: (_, { userAcceptId }) =>
         pubsub.asyncIterableIterator(EVENTS.FRIEND_ADDED),
-      resolve: (payload, args) => {
+      resolve: (payload, _, context) => {
         // Chỉ gửi nếu người nhận đúng
-        console.log(payload);
-        return payload.friendRequested.userAcceptId === args.userAcceptId
+        console.log("payload friendRequested: ", payload);
+        console.log("context userId: ", context.userId);
+        return payload.friendRequested.userAcceptId === context.userId
           ? payload.friendRequested
           : null;
       },
@@ -182,8 +183,9 @@ export const resolverUser = {
     friendAccepted: {
       subscribe: () => 
         pubsub.asyncIterableIterator(EVENTS.FRIEND_ADDED),
-      resolve: (payload, args, context) => {
-        console.log("payload: ", payload)
+      resolve: (payload, _, context) => {
+        console.log("payload friendAccepted: ", payload)
+        console.log("context userId: ", context.userId)
         return payload.friendAccepted.userSendId === context.userId
           ? payload.friendAccepted
           : null;
@@ -212,11 +214,12 @@ export const resolverUser = {
     },
     logoutUser: {
       subscribe: () => pubsub.asyncIterableIterator(EVENTS.USER_LOGOUT),
-      resolve: (payload, args) => {
+      resolve: (payload, _,context) => {
+        console.log("payload logoutUser: ", payload);
+        console.log("context userId: ", context.userId);
         const isFriend = payload.logoutUser.friends.some(
-          (friend) => friend.id === args.userId
+          (friend) => friend.id === context.userId
         );
-        console.log(isFriend)
         return isFriend ? payload.logoutUser.userLogoutId : null;
       }
     }

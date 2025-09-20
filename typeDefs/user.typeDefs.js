@@ -19,7 +19,7 @@ export const typeDefsUser = gql`
 
   type Mutation {
     createUser(username: String!,password: String): User!
-    addFriend(userAcceptId: ID!): [User!]
+    addFriend(userAcceptId: ID!): [User!] #Trả về list chứa thông tin người gửi và người nhận
     loginUser(username: String!, password: String!): User!
     acceptFriend(userSendId: ID!): [User!]!
     logoutUser: User!
@@ -30,10 +30,10 @@ export const typeDefsUser = gql`
   }
   type Subscription {
     getListUsers: [User]
-    friendRequested(userAcceptId: ID!): FriendPayload
+    friendRequested: FriendPayload
     loginUser: UserLoginInfo
     friendAccepted: FriendPayload
-    logoutUser(userId: ID!): ID
+    logoutUser: ID
   }
 
   type UserLoginInfo {
