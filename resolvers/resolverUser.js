@@ -132,6 +132,7 @@ export const resolverUser = {
         isFriends: user.isFriends,
         token: token,
       };
+    }
     },
     logoutUser: async (_, __, context) => {
       if (!context.userId) throw new Error("Unauthorized");
@@ -193,11 +194,17 @@ export const resolverUser = {
     // Kiểm tra xem người hiện tại có phải là bạn bè của người đăng nhập không -> nếu có thì trả về userLoginId
 
     loginUser: {
-      subscribe: (_, { userId }) => pubsub.asyncIterableIterator(EVENTS.USER_LOGIN),
-      resolve: (payload, args) => {
-        console.log("friends: ", payload.loginUser.friends)
-        console.log("userId in args: ", args.userId)
-        // Chỉ trả về nếu userId trong args nằm trong danh sách bạn bè của người vừa login
+      subscribe: async (_, __, context) => {
+        const userId = context.userId;
+        if (!userId) {
+          throw new Error("Unauthorized");
+        }
+        // user.id ở đây lấy từ token
+        return pubsub.asyncIterableIterator(EVENTS.USER_LOGIN);
+      },
+      resolve: (payload, _, context) => {
+        // user.id từ token
+        const userId = context.userId;
         const isFriend = payload.loginUser.friends.some(
           (friend) => friend.id === userId
         );
