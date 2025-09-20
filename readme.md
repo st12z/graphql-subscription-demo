@@ -32,20 +32,20 @@ npm start
 - [x] **Login**
   - [x] thêm JWT token, trả về client ID, username, avatar
   - [x] Subscription `loginUser`: bỏ userId, lấy từ JWT token
-- [ ] **Logout**
-  - [ ] Bạn bè của người đó sẽ biết người đó logout
+- [x] **Logout**
+  - [x] Bạn bè của người đó sẽ biết người đó logout
   - [ ] Tạo subscription lắng nghe chính userId (lấy từ token) để đợi thông tin người đăng xuất, trả về danh sách bạn bè rồi kiểm tra mình có phải bạn bè người đó không
-- [ ] **addFriend**
-  - [ ] Bỏ userSendID, lấy từ JWT token
-  - [ ] Subscription `friendRequested`: bỏ userAcceptId, lấy từ JWT token
+- [x] **addFriend**
+  - [x] Bỏ userSendID, lấy từ JWT token
+  - [x] Subscription `friendRequested`: bỏ userAcceptId, lấy từ JWT token
 
 ---
 
 ## **Khánh**
-- [ ] **acceptFriend**
-  - [ ] Bỏ userAcceptId, lấy từ JWT token
-  - [ ] Khi chấp nhận thành công tạo phòng chat cho 2 người (theo model trong `chat.model.js`)
-  - [ ] Subscription `friendAccepted`: bỏ userSendId
+- [x] **acceptFriend**
+  - [x] Bỏ userAcceptId, lấy từ JWT token
+  - [x] Khi chấp nhận thành công tạo phòng chat cho 2 người (theo model trong `chat.model.js`)
+  - [x] Subscription `friendAccepted`: bỏ userSendId
 - [x] Thêm DB `chat`, `room_chat`
 - [x] Thêm chức năng khi đăng nhập thì thông báo cho bạn bè
 ---
