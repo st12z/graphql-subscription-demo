@@ -132,7 +132,6 @@ export const resolverUser = {
         isFriends: user.isFriends,
         token: token,
       };
-    }
     },
     logoutUser: async (_, __, context) => {
       if (!context.userId) throw new Error("Unauthorized");
