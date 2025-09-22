@@ -7,7 +7,7 @@ import { DateScalar } from "../scalar/graphql-scalar-type.js";
 export const resolverUser = {
   Date: DateScalar,
   Query: {
-    getListUsers: async () => {
+    getListUsers: async (context) => {
       const users = await User.find();
       return users;
     },
@@ -46,7 +46,7 @@ export const resolverUser = {
         user.requestFriends.push(userAcceptId);
         friend.acceptFriends.push(context.userId);
         await Promise.all([user.save(), friend.save()]);
-        pubsub.publish(EVENTS.FRIEND_ADDED, {
+        pubsub.publish(`${EVENTS.FRIEND_ADDED}`, {
           friendRequested: { userSendId: context.userId, userAcceptId },
         });
         return [user, friend];
@@ -65,7 +65,10 @@ export const resolverUser = {
       if (!user || !friend) {
         throw new Error("User or friend not found");
       }
-      if (!user.isFriends.includes(context.userId) && !friend.isFriends.includes(userSendId)) {
+      if (
+        !user.isFriends.includes(context.userId) &&
+        !friend.isFriends.includes(userSendId)
+      ) {
         user.isFriends.push(context.userId);
         friend.isFriends.push(userSendId);
         user.requestFriends = user.requestFriends.filter(
@@ -98,7 +101,7 @@ export const resolverUser = {
       if (!user || user.password !== password) {
         throw new Error("Invalid username or password");
       }
-
+      console.log("User logging in:", user.id);
       user.status = "active";
       user.timeOnl = new Date();
       await user.save();
@@ -110,15 +113,12 @@ export const resolverUser = {
       const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET, {
         expiresIn: "1h",
       });
-      pubsub.publish(EVENTS.USER_LOGIN, {
-        loginUser: {
-          friends: users,
-          user: {
-            id: user.id,
-            status: user.status,
-            timeOnl: user.timeOnl,
+      users.forEach((friend) => {
+        pubsub.publish(`${EVENTS.USER_LOGIN}.${friend.id}`, {
+          loginUser: {
+            user: { id: user.id, status: user.status, timeOnl: user.timeOnl },
           },
-        },
+        });
       });
 
       return {
@@ -146,12 +146,7 @@ export const resolverUser = {
       pubsub.publish(EVENTS.USER_LOGOUT, {
         logoutUser: {
           friends,
-          user: {
-            id: user.id,
-            username: user.username,
-            status: user.status,
-            timeOnl: user.timeOnl
-          }
+          userLogoutId: user.id,
         }
       })
       return {
@@ -163,7 +158,7 @@ export const resolverUser = {
         isFriends: user.isFriends,
         token: null,
       };
-    }
+    },
   },
   Subscription: {
     // lắng nghe sự kiện người dùng mới được tạo và trả về danh sách người dùng mới nhất
@@ -190,8 +185,8 @@ export const resolverUser = {
       subscribe: () =>
         pubsub.asyncIterableIterator(EVENTS.FRIEND_ADDED),
       resolve: (payload, _, context) => {
-        console.log("payload friendAccepted: ", payload)
-        console.log("context userId: ", context.userId)
+        console.log("payload friendAccepted: ", payload);
+        console.log("context userId: ", context.userId);
         return payload.friendAccepted.userSendId === context.userId
           ? payload.friendAccepted
           : null;
@@ -203,37 +198,29 @@ export const resolverUser = {
     loginUser: {
       subscribe: async (_, __, context) => {
         const userId = context.userId;
+        console.log("Subscription context userId:", userId);
         if (!userId) {
           throw new Error("Unauthorized");
         }
         // user.id ở đây lấy từ token
-        return pubsub.asyncIterableIterator(EVENTS.USER_LOGIN);
+        return pubsub.asyncIterableIterator(`${EVENTS.USER_LOGIN}.${userId}`);
       },
-      resolve: (payload, _, context) => {
+      resolve: (payload, __, context) => {
         // user.id từ token
-        const userId = context.userId;
-        const isFriend = payload.loginUser.friends.some(
-          (friend) => friend.id === userId
-        );
-        return isFriend ? payload.loginUser.user : null;
+        console.log("payload loginUser: ", payload);
+        return payload.loginUser.user;
       },
     },
     logoutUser: {
-      subscribe: async (_, __, context) => {
-        const userId = context.userId;
-        if (!userId) {
-          throw new Error("Unauthorized");
-        }
-        return pubsub.asyncIterableIterator(EVENTS.USER_LOGOUT);
-      },
+      subscribe: () => pubsub.asyncIterableIterator(EVENTS.USER_LOGOUT),
       resolve: (payload, _, context) => {
-        const userId = context.userId;
+        console.log("payload logoutUser: ", payload);
+        console.log("context userId: ", context.userId);
         const isFriend = payload.logoutUser.friends.some(
           (friend) => friend.id === userId
         );
-        return isFriend ? payload.logoutUser.user : null;
+        return isFriend ? payload.logoutUser.userLogoutId : null;
       }
     }
-
   },
 };

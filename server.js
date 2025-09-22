@@ -72,7 +72,7 @@ useServer(
   },
   wsServer
 );
-
-httpServer.listen(4000, () => {
-  console.log("🚀 Server chạy tại http://localhost:4000/graphql");
+const PORT =process.env.PORT || 4000;
+httpServer.listen(PORT, () => {
+  console.log(`Server chạy tại http://localhost:${PORT}/graphql`);
 });
