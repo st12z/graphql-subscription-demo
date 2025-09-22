@@ -90,11 +90,10 @@ export const resolverUser = {
             userAID,
             userBID,
           });
-          const newRoom =await roomChat.save();
+          const newRoom = await roomChat.save();
           console.log("Created RoomChat id:", newRoom.id);
         }
 
-        
         pubsub.publish(`${EVENTS.FRIEND_ACCEPTED}.${userSendId}`, {
           friendAccepted: {
             userSendId: userSendId,
@@ -118,21 +117,16 @@ export const resolverUser = {
       user.timeOnl = new Date();
       await user.save();
 
-      const friends = await User.find({
-        _id: { $in: user.isFriends || [] },
-      }).select("id username avatar");
-
       const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET, {
         expiresIn: "1h",
       });
-      friends.forEach((friend) => {
-        pubsub.publish(`${EVENTS.USER_LOGIN}.${friend.id}`, {
-          loginUser: {
-            user: { id: user.id, status: user.status, timeOnl: user.timeOnl },
-          },
-        });
+      pubsub.publish(EVENTS.USER_LOGIN, {
+        loginUser: {
+          friendsIds: user.isFriends,
+          user: { id: user.id, status: user.status, timeOnl: user.timeOnl },
+        },
       });
-
+      console.log("Listed friendsIds:", user.isFriends);
       return {
         id: user.id,
         username: user.username,
@@ -154,13 +148,11 @@ export const resolverUser = {
       user.timeOff = new Date();
       await user.save();
 
-      const friends = await User.find({ _id: { $in: user.isFriends || [] } });
-      friends.forEach((friend) => {
-        pubsub.publish(`${EVENTS.USER_LOGOUT}.${friend.id}`, {
-          logoutUser: {
-            user: { id: user.id, status: user.status, timeOff: user.timeOff },
-          },
-        });
+      pubsub.publish(EVENTS.USER_LOGOUT, {
+        logoutUser: {
+          friendsIds: user.isFriends,
+          user: { id: user.id, status: user.status, timeOnl: user.timeOnl },
+        },
       });
       return {
         id: user.id,
@@ -225,12 +217,12 @@ export const resolverUser = {
           throw new Error("Unauthorized");
         }
         // user.id ở đây lấy từ token
-        return pubsub.asyncIterableIterator(`${EVENTS.USER_LOGIN}.${userId}`);
+        return pubsub.asyncIterableIterator(EVENTS.USER_LOGIN);
       },
       resolve: (payload, __, context) => {
         // user.id từ token
         console.log("payload loginUser: ", payload);
-        return payload.loginUser.user;
+        return payload.loginUser.friendsIds.includes(context.userId)? payload.loginUser.user : null;
       },
     },
     logoutUser: {
@@ -241,12 +233,14 @@ export const resolverUser = {
           throw new Error("Unauthorized");
         }
         // user.id ở đây lấy từ token
-        return pubsub.asyncIterableIterator(`${EVENTS.USER_LOGOUT}.${userId}`);
+        return pubsub.asyncIterableIterator(EVENTS.USER_LOGOUT);
       },
       resolve: (payload, __, context) => {
         console.log("payload logoutUser: ", JSON.stringify(payload));
         console.log("context userId: ", context.userId);
-        return payload.logoutUser.user;
+        return payload.logoutUser.friendsIds.includes(context.userId)
+          ? payload.logoutUser.user
+          : null;
       },
     },
   },
