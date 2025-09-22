@@ -11,6 +11,7 @@ export const typeDefsUser = gql`
     status: String!
     isFriends: [ID]
     timeOnl: Date
+    timeOff: Date
     token: String
   }
   type Query {
@@ -33,18 +34,20 @@ export const typeDefsUser = gql`
     friendRequested: FriendPayload
     loginUser: UserLoginInfo
     friendAccepted: FriendPayload
-    logoutUser: UserLogoutInfo
+    logoutUser: UserLoginInfo
   }
 
   type UserLoginInfo {
     id: ID!
     status: String!
     timeOnl: Date
+    timeOff: Date
   }
 
   type UserLogoutInfo {
     id: ID!
     status: String!
     timeOnl: Date
+    timeOff: Date
   }
 `;

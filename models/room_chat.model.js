@@ -11,5 +11,5 @@ const roomChat =new mongoose.Schema({
 roomChat.virtual('id').get(function() {
   return this._id.toString();
 });
-const RoomChat = mongoose.model("Chat",roomChat,"room_chats");
+const RoomChat = mongoose.model("RoomChat",roomChat,"room_chats");
 export default RoomChat;

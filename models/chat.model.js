@@ -3,6 +3,7 @@ const chatSchema =new mongoose.Schema({
   roomChatID: String,
   userSendID: String,
   message: String,
+  isRead: { type: Boolean, default: false },
 },{
   timestamps:true,
   toJSON: { virtuals: true },

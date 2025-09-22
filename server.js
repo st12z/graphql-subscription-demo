@@ -9,7 +9,9 @@ import jwt from "jsonwebtoken";
 
 import { connectDB } from "./config/database.js";
 import { typeDefsUser } from "./typeDefs/user.typeDefs.js";
+import { typeDefsChat } from "./typeDefs/chat.typeDefs.js";
 import { resolverUser } from "./resolvers/resolverUser.js";
+import { resolveChat } from "./resolvers/resolverChat.js";
 
 dotenv.config();
 connectDB();
@@ -26,8 +28,8 @@ function getUserIdFromToken(token) {
 }
 
 const schema = makeExecutableSchema({
-  typeDefs: [typeDefsUser],
-  resolvers: [resolverUser],
+  typeDefs: [typeDefsUser, typeDefsChat],
+  resolvers: [resolverUser, resolveChat],
 });
 
 const app = express();
