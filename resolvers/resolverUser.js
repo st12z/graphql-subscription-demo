@@ -142,11 +142,16 @@ export const resolverUser = {
       user.timeOnl = new Date();
       await user.save();
 
-      const friends = await User.find({ _id: { $in: user.isFriends || [] } });
+      const friends = await User.find({ _id: { $in: user.isFriends || [] } }).select("_id username avatar status timeOnl");
       pubsub.publish(EVENTS.USER_LOGOUT, {
         logoutUser: {
           friends,
-          userLogoutId: user.id,
+          user: {
+            id: user.id,
+            username: user.username,
+            status: user.status,
+            timeOnl: user.timeOnl
+          }
         }
       })
       return {
@@ -155,6 +160,7 @@ export const resolverUser = {
         avatar: user.avatar,
         status: user.status,
         timeOnl: user.timeOnl,
+        isFriends: user.isFriends,
         token: null,
       };
     }
@@ -181,7 +187,7 @@ export const resolverUser = {
     },
     // người gửi lắng nghe sự kiện lời mời kết bạn được chấp nhận
     friendAccepted: {
-      subscribe: () => 
+      subscribe: () =>
         pubsub.asyncIterableIterator(EVENTS.FRIEND_ADDED),
       resolve: (payload, _, context) => {
         console.log("payload friendAccepted: ", payload)
@@ -213,15 +219,21 @@ export const resolverUser = {
       },
     },
     logoutUser: {
-      subscribe: () => pubsub.asyncIterableIterator(EVENTS.USER_LOGOUT),
-      resolve: (payload, _,context) => {
-        console.log("payload logoutUser: ", payload);
-        console.log("context userId: ", context.userId);
+      subscribe: async (_, __, context) => {
+        const userId = context.userId;
+        if (!userId) {
+          throw new Error("Unauthorized");
+        }
+        return pubsub.asyncIterableIterator(EVENTS.USER_LOGOUT);
+      },
+      resolve: (payload, _, context) => {
+        const userId = context.userId;
         const isFriend = payload.logoutUser.friends.some(
-          (friend) => friend.id === context.userId
+          (friend) => friend.id === userId
         );
-        return isFriend ? payload.logoutUser.userLogoutId : null;
+        return isFriend ? payload.logoutUser.user : null;
       }
     }
+
   },
 };
