@@ -4,6 +4,8 @@ import RoomChat from "../models/room_chat.model.js";
 import jwt from "jsonwebtoken";
 import { pubsub, EVENTS } from "../pubsub.js";
 import { DateScalar } from "../scalar/graphql-scalar-type.js";
+import { ttlAsyncIterator } from "../utils/subscriptionHelper.js";
+import { checkThrottle } from "../utils/rateLimiter.js";
 export const resolverUser = {
   Date: DateScalar,
   Query: {
@@ -113,6 +115,7 @@ export const resolverUser = {
       if (!user || user.password !== password) {
         throw new Error("Invalid username or password");
       }
+
       console.log("User logging in:", user.id);
       user.status = "active";
       user.timeOnl = new Date();
@@ -216,8 +219,11 @@ export const resolverUser = {
         if (!userId) {
           throw new Error("Unauthorized");
         }
-        // user.id ở đây lấy từ token
-        return pubsub.asyncIterableIterator(`${EVENTS.USER_LOGIN}.${userId}`);
+        // chặn spam connect
+        checkThrottle(userId)
+        // user.id ở đây lấy từ token 
+        // TTL 5 phút auto unsubscribe
+        return ttlAsyncIterator(pubsub, `${EVENTS.USER_LOGIN}.${userId}`, 5 * 60 * 1000);
       },
       resolve: (payload, __, context) => {
         // user.id từ token
@@ -232,8 +238,9 @@ export const resolverUser = {
         if (!userId) {
           throw new Error("Unauthorized");
         }
+        checkThrottle(userId);
         // user.id ở đây lấy từ token
-        return pubsub.asyncIterableIterator(`${EVENTS.USER_LOGOUT}.${userId}`);
+        return ttlAsyncIterator(pubsub, `${EVENTS.USER_LOGOUT}.${userId}`, 5 * 60 * 1000);
       },
       resolve: (payload, __, context) => {
         console.log("payload logoutUser: ", JSON.stringify(payload));

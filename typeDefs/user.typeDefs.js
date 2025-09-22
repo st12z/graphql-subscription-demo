@@ -34,7 +34,7 @@ export const typeDefsUser = gql`
     friendRequested: FriendPayload
     loginUser: UserLoginInfo
     friendAccepted: FriendPayload
-    logoutUser: UserLoginInfo
+    logoutUser: UserLogoutInfo
   }
 
   type UserLoginInfo {
