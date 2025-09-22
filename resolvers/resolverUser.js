@@ -62,7 +62,7 @@ export const resolverUser = {
       }
       const user = await User.findOne({ _id: context.userId });
       const friend = await User.findOne({ _id: userSendId });
-      
+
       if (!user || !friend) {
         throw new Error("User or friend not found");
       }
@@ -83,14 +83,23 @@ export const resolverUser = {
         await Promise.all([user.save(), friend.save()]);
 
         const [userAID, userBID] = [userSendId, context.userId].sort();
-        const roomChat = new RoomChat({
-          userAID,
-          userBID,
-        });
-        await roomChat.save();
-        console.log("Created RoomChat id:", roomChat.id);
+        const roomChatExist = await RoomChat.findOne({ userAID, userBID });
+        if (!roomChatExist) {
+          console.log("RoomChat not already exists with id:", roomChatExist.id);
+          const roomChat = new RoomChat({
+            userAID,
+            userBID,
+          });
+          const newRoom =await roomChat.save();
+          console.log("Created RoomChat id:", newRoom.id);
+        }
+
+        
         pubsub.publish(`${EVENTS.FRIEND_ACCEPTED}.${userSendId}`, {
-          friendAccepted: { userSendId: userSendId, userAcceptId: context.userId },
+          friendAccepted: {
+            userSendId: userSendId,
+            userAcceptId: context.userId,
+          },
         });
         return [user, friend];
       }
@@ -174,25 +183,32 @@ export const resolverUser = {
     // Kiểm tra userAcceptId trong payload có khớp với userAcceptId trong args không (Đối số là tham số mình truyển lắng nghe ở applo server)
 
     friendRequested: {
-      subscribe:async (_, __,context) =>{
-        console.log("Subscription friendRequested userAcceptId:", context.userId);
-        return pubsub.asyncIterableIterator(`${EVENTS.FRIEND_REQUESTED}.${context.userId}`);
+      subscribe: async (_, __, context) => {
+        console.log(
+          "Subscription friendRequested userAcceptId:",
+          context.userId
+        );
+        return pubsub.asyncIterableIterator(
+          `${EVENTS.FRIEND_REQUESTED}.${context.userId}`
+        );
       },
-        
+
       resolve: (payload, _, context) => {
         // Chỉ gửi nếu người nhận đúng
         console.log("payload friendRequested: ", payload);
         console.log("context userId: ", context.userId);
-        return payload.friendRequested ;
+        return payload.friendRequested;
       },
     },
     // người gửi lắng nghe sự kiện lời mời kết bạn được chấp nhận
     friendAccepted: {
-      subscribe: (_,__,context) => {
+      subscribe: (_, __, context) => {
         console.log("Subscription friendAccepted userSendId:", context.userId);
-        return pubsub.asyncIterableIterator(`${EVENTS.FRIEND_ACCEPTED}.${context.userId}`);
+        return pubsub.asyncIterableIterator(
+          `${EVENTS.FRIEND_ACCEPTED}.${context.userId}`
+        );
       },
-      resolve: (payload,__, context) => {
+      resolve: (payload, __, context) => {
         console.log("payload friendAccepted: ", payload);
         console.log("context userId: ", context.userId);
         return payload.friendAccepted;
@@ -235,5 +251,3 @@ export const resolverUser = {
     },
   },
 };
-
-
