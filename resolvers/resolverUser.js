@@ -40,13 +40,13 @@ export const resolverUser = {
         !friend.isFriends.includes(context.userId) &&
         !user.acceptFriends.includes(userAcceptId) &&
         !friend.acceptFriends.includes(context.userId) &&
-        !user.requestFriends.includes(context.userId) &&
+        !user.requestFriends.includes(userAcceptId) &&
         !friend.requestFriends.includes(context.userId)
       ) {
         user.requestFriends.push(userAcceptId);
         friend.acceptFriends.push(context.userId);
         await Promise.all([user.save(), friend.save()]);
-        pubsub.publish(`${EVENTS.FRIEND_ADDED}`, {
+        pubsub.publish(`${EVENTS.FRIEND_REQUESTED}.${userAcceptId}`, {
           friendRequested: { userSendId: context.userId, userAcceptId },
         });
         return [user, friend];
@@ -60,22 +60,25 @@ export const resolverUser = {
       if (!context.userId) {
         throw new Error("Unauthorized: Please login");
       }
-      const user = await User.findOne({ _id: userSendId });
-      const friend = await User.findOne({ _id: context.userId });
+      const user = await User.findOne({ _id: context.userId });
+      const friend = await User.findOne({ _id: userSendId });
+      
       if (!user || !friend) {
         throw new Error("User or friend not found");
       }
       if (
-        !user.isFriends.includes(context.userId) &&
-        !friend.isFriends.includes(userSendId)
+        !user.isFriends.includes(friend.id) &&
+        !friend.isFriends.includes(user.id) &&
+        user.acceptFriends.includes(friend.id) &&
+        friend.requestFriends.includes(user.id)
       ) {
-        user.isFriends.push(context.userId);
-        friend.isFriends.push(userSendId);
-        user.requestFriends = user.requestFriends.filter(
-          (id) => id !== context.userId
+        user.isFriends.push(friend.id);
+        friend.isFriends.push(user.id);
+        user.acceptFriends = user.acceptFriends.filter(
+          (id) => id !== friend.id
         );
-        friend.acceptFriends = friend.acceptFriends.filter(
-          (id) => id !== userSendId
+        friend.requestFriends = friend.requestFriends.filter(
+          (id) => id !== user.id
         );
         await Promise.all([user.save(), friend.save()]);
 
@@ -86,8 +89,8 @@ export const resolverUser = {
         });
         await roomChat.save();
         console.log("Created RoomChat id:", roomChat.id);
-        pubsub.publish(EVENTS.FRIEND_ADDED, {
-          friendAccepted: { userSendId, userAcceptId: context.userId },
+        pubsub.publish(`${EVENTS.FRIEND_ACCEPTED}.${userSendId}`, {
+          friendAccepted: { userSendId: userSendId, userAcceptId: context.userId },
         });
         return [user, friend];
       }
@@ -106,14 +109,14 @@ export const resolverUser = {
       user.timeOnl = new Date();
       await user.save();
 
-      const users = await User.find({
+      const friends = await User.find({
         _id: { $in: user.isFriends || [] },
       }).select("id username avatar");
 
       const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET, {
         expiresIn: "1h",
       });
-      users.forEach((friend) => {
+      friends.forEach((friend) => {
         pubsub.publish(`${EVENTS.USER_LOGIN}.${friend.id}`, {
           loginUser: {
             user: { id: user.id, status: user.status, timeOnl: user.timeOnl },
@@ -139,23 +142,26 @@ export const resolverUser = {
       const user = await User.findById(context.userId);
       if (!user) throw new Error("User not found");
       user.status = "deactive";
-      user.timeOnl = new Date();
+      user.timeOff = new Date();
       await user.save();
 
       const friends = await User.find({ _id: { $in: user.isFriends || [] } });
-      pubsub.publish(EVENTS.USER_LOGOUT, {
-        logoutUser: {
-          friends,
-          userLogoutId: user.id,
-        },
+      friends.forEach((friend) => {
+        pubsub.publish(`${EVENTS.USER_LOGOUT}.${friend.id}`, {
+          logoutUser: {
+            user: { id: user.id, status: user.status, timeOff: user.timeOff },
+          },
+        });
       });
       return {
         id: user.id,
         username: user.username,
         avatar: user.avatar,
         status: user.status,
-        timeOnl: user.timeOnl,
-        token: null,
+        acceptFriends: user.acceptFriends,
+        requestFriends: user.requestFriends,
+        isFriends: user.isFriends,
+        timeOff: user.timeOff,
       };
     },
   },
@@ -168,26 +174,28 @@ export const resolverUser = {
     // Kiểm tra userAcceptId trong payload có khớp với userAcceptId trong args không (Đối số là tham số mình truyển lắng nghe ở applo server)
 
     friendRequested: {
-      subscribe: (_, { userAcceptId }) =>
-        pubsub.asyncIterableIterator(EVENTS.FRIEND_ADDED),
+      subscribe:async (_, __,context) =>{
+        console.log("Subscription friendRequested userAcceptId:", context.userId);
+        return pubsub.asyncIterableIterator(`${EVENTS.FRIEND_REQUESTED}.${context.userId}`);
+      },
+        
       resolve: (payload, _, context) => {
         // Chỉ gửi nếu người nhận đúng
         console.log("payload friendRequested: ", payload);
         console.log("context userId: ", context.userId);
-        return payload.friendRequested.userAcceptId === context.userId
-          ? payload.friendRequested
-          : null;
+        return payload.friendRequested ;
       },
     },
     // người gửi lắng nghe sự kiện lời mời kết bạn được chấp nhận
     friendAccepted: {
-      subscribe: () => pubsub.asyncIterableIterator(EVENTS.FRIEND_ADDED),
-      resolve: (payload, _, context) => {
+      subscribe: (_,__,context) => {
+        console.log("Subscription friendAccepted userSendId:", context.userId);
+        return pubsub.asyncIterableIterator(`${EVENTS.FRIEND_ACCEPTED}.${context.userId}`);
+      },
+      resolve: (payload,__, context) => {
         console.log("payload friendAccepted: ", payload);
         console.log("context userId: ", context.userId);
-        return payload.friendAccepted.userSendId === context.userId
-          ? payload.friendAccepted
-          : null;
+        return payload.friendAccepted;
       },
     },
     // lắng nghe sự kiện có người dùng đăng nhập
@@ -210,15 +218,22 @@ export const resolverUser = {
       },
     },
     logoutUser: {
-      subscribe: () => pubsub.asyncIterableIterator(EVENTS.USER_LOGOUT),
-      resolve: (payload, _, context) => {
-        console.log("payload logoutUser: ", payload);
+      subscribe: async (_, __, context) => {
+        const userId = context.userId;
+        console.log("Subscription context userId:", userId);
+        if (!userId) {
+          throw new Error("Unauthorized");
+        }
+        // user.id ở đây lấy từ token
+        return pubsub.asyncIterableIterator(`${EVENTS.USER_LOGOUT}.${userId}`);
+      },
+      resolve: (payload, __, context) => {
+        console.log("payload logoutUser: ", JSON.stringify(payload));
         console.log("context userId: ", context.userId);
-        const isFriend = payload.logoutUser.friends.some(
-          (friend) => friend.id === context.userId
-        );
-        return isFriend ? payload.logoutUser.userLogoutId : null;
+        return payload.logoutUser.user;
       },
     },
   },
 };
+
+

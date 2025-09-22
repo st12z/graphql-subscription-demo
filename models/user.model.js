@@ -7,6 +7,7 @@ const userSchema =new mongoose.Schema({
     default:"deactive"
   },
   timeOnl:Date,
+  timeOff:Date,
   deleted:{
     type:Boolean,
     default:false
