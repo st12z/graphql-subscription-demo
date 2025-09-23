@@ -204,7 +204,8 @@ export const resolverUser = {
         }
         checkThrottle(userId);
         // user.id ở đây lấy từ token
-        return ttlAsyncIterator(pubsub, `${EVENTS.USER_LOGIN}.${userId}`, 1 * 60 * 1000);
+        return ttlAsyncIterator(pubsub, EVENTS.USER_LOGIN, 1 * 60 * 1000);
+       
       },
       resolve: (payload, __, context) => {
         // user.id từ token
@@ -223,7 +224,7 @@ export const resolverUser = {
         }
         checkThrottle(userId);
         // user.id ở đây lấy từ token
-        return ttlAsyncIterator(pubsub, `${EVENTS.USER_LOGOUT}.${userId}`, 1 * 60 * 1000);
+        return ttlAsyncIterator(pubsub, EVENTS.USER_LOGOUT, 1 * 60 * 1000);
       },
       resolve: (payload, __, context) => {
         console.log("payload logoutUser: ", JSON.stringify(payload));
