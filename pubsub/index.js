@@ -1,5 +1,4 @@
 import { RedisPubSub } from "graphql-redis-subscriptions";
-import { PubSub } from "graphql-subscriptions";
 import Redis from "ioredis";
 
 const options = {

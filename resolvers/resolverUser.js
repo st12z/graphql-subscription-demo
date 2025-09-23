@@ -1,8 +1,8 @@
 import { subscribe } from "graphql";
 import User from "../models/user.model.js";
-import RoomChat from "../models/room_chat.model.js";
 import jwt from "jsonwebtoken";
-import { pubsub, EVENTS } from "../pubsub.js";
+import { pubsub } from "../pubsub/index.js";
+import { EVENTS } from "../pubsub/event.js";
 import { DateScalar } from "../scalar/graphql-scalar-type.js";
 import { ttlAsyncIterator } from "../utils/subscriptionHelper.js";
 import { checkThrottle } from "../utils/rateLimiter.js";
@@ -84,17 +84,7 @@ export const resolverUser = {
         );
         await Promise.all([user.save(), friend.save()]);
 
-        const [userAID, userBID] = [userSendId, context.userId].sort();
-        const roomChatExist = await RoomChat.findOne({ userAID, userBID });
-        if (!roomChatExist) {
-          console.log("RoomChat not already exists with id:", roomChatExist.id);
-          const roomChat = new RoomChat({
-            userAID,
-            userBID,
-          });
-          const newRoom = await roomChat.save();
-          console.log("Created RoomChat id:", newRoom.id);
-        }
+       
 
         pubsub.publish(`${EVENTS.FRIEND_ACCEPTED}.${userSendId}`, {
           friendAccepted: {
