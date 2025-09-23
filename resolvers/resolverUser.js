@@ -4,6 +4,8 @@ import RoomChat from "../models/room_chat.model.js";
 import jwt from "jsonwebtoken";
 import { pubsub, EVENTS } from "../pubsub.js";
 import { DateScalar } from "../scalar/graphql-scalar-type.js";
+import { ttlAsyncIterator } from "../utils/subscriptionHelper.js";
+import { checkThrottle } from "../utils/rateLimiter.js";
 export const resolverUser = {
   Date: DateScalar,
   Query: {
@@ -112,6 +114,7 @@ export const resolverUser = {
       if (!user || user.password !== password) {
         throw new Error("Invalid username or password");
       }
+
       console.log("User logging in:", user.id);
       user.status = "active";
       user.timeOnl = new Date();
@@ -159,10 +162,8 @@ export const resolverUser = {
         username: user.username,
         avatar: user.avatar,
         status: user.status,
-        acceptFriends: user.acceptFriends,
-        requestFriends: user.requestFriends,
-        isFriends: user.isFriends,
-        timeOff: user.timeOff,
+        timeOnl: user.timeOnl,
+        token: null,
       };
     },
   },
@@ -194,13 +195,8 @@ export const resolverUser = {
     },
     // người gửi lắng nghe sự kiện lời mời kết bạn được chấp nhận
     friendAccepted: {
-      subscribe: (_, __, context) => {
-        console.log("Subscription friendAccepted userSendId:", context.userId);
-        return pubsub.asyncIterableIterator(
-          `${EVENTS.FRIEND_ACCEPTED}.${context.userId}`
-        );
-      },
-      resolve: (payload, __, context) => {
+      subscribe: () => pubsub.asyncIterableIterator(EVENTS.FRIEND_ADDED),
+      resolve: (payload, _, context) => {
         console.log("payload friendAccepted: ", payload);
         console.log("context userId: ", context.userId);
         return payload.friendAccepted;
@@ -222,7 +218,9 @@ export const resolverUser = {
       resolve: (payload, __, context) => {
         // user.id từ token
         console.log("payload loginUser: ", payload);
-        return payload.loginUser.friendsIds.includes(context.userId)? payload.loginUser.user : null;
+        return payload.loginUser.friendsIds.includes(context.userId)
+          ? payload.loginUser.user
+          : null;
       },
     },
     logoutUser: {
@@ -232,6 +230,7 @@ export const resolverUser = {
         if (!userId) {
           throw new Error("Unauthorized");
         }
+        checkThrottle(userId);
         // user.id ở đây lấy từ token
         return pubsub.asyncIterableIterator(EVENTS.USER_LOGOUT);
       },
