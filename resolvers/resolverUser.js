@@ -185,7 +185,16 @@ export const resolverUser = {
     },
     // người gửi lắng nghe sự kiện lời mời kết bạn được chấp nhận
     friendAccepted: {
-      subscribe: () => pubsub.asyncIterableIterator(EVENTS.FRIEND_ADDED),
+      subscribe: async (_, __, context) => {
+        console.log(
+          "Subscription friendAccepted userSendId: ",
+          context.userId
+        );
+        return pubsub.asyncIterableIterator(
+          `${EVENTS.FRIEND_ACCEPTED}.${context.userId}`
+        );
+      },
+
       resolve: (payload, _, context) => {
         console.log("payload friendAccepted: ", payload);
         console.log("context userId: ", context.userId);
