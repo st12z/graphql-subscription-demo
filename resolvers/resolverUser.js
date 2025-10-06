@@ -7,10 +7,8 @@ import { DateScalar } from "../scalar/graphql-scalar-type.js";
 import { ttlAsyncIterator } from "../utils/subscriptionHelper.js";
 import { checkThrottle } from "../utils/rateLimiter.js";
 import { compressPayload, decompressPayload } from "../utils/compress.js";
-import { benchmarkCompression } from "../benmark/monitoring.js";
 import { withSubscriptionLimit } from "../utils/subscriptionLimit.js";
 import { batchPublish, directPublish } from "../benmark/batch.js";
-const USE_BATCH = true; // Chuyển sang dùng batch publish
 export const resolverUser = {
   Date: DateScalar,
   Query: {
@@ -32,12 +30,8 @@ export const resolverUser = {
       await user.save();
       // const users = await User.find();
       const compressedUsers = compressPayload([user]);
-      if (USE_BATCH) {
-        batchPublish(pubsub, EVENTS.MODEL_CREATED, compressedUsers);
-      } else {
-        directPublish(pubsub, EVENTS.MODEL_CREATED, compressedUsers);
-      }
-      benchmarkCompression([user]); // Đo nếu không nén data và có nén data
+      batchPublish(pubsub, EVENTS.MODEL_CREATED, compressedUsers);
+      directPublish(pubsub, EVENTS.MODEL_CREATED, compressedUsers);
       return user;
     },
     // Thêm bạn bè. Nhận vào 2 tham số userSenđI, userAcceptId.
@@ -125,7 +119,7 @@ export const resolverUser = {
       await user.save();
 
       const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET, {
-        expiresIn: "1h",
+        expiresIn: "5h",
       });
       pubsub.publish(EVENTS.USER_LOGIN, {
         loginUser: {

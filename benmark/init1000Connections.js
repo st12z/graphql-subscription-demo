@@ -8,7 +8,7 @@ dotenv.config();
 const TOTAL_CONNECTIONS = 10;
 
 // URL load balancer Nginx
-const WS_URL = "ws://localhost:8080/graphql";
+const WS_URL = "ws://172.28.212.163:8081/graphql";
 
 function createToken(userId) {
   return jwt.sign({ userId }, process.env.JWT_SECRET, { expiresIn: "1h" });

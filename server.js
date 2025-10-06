@@ -3,7 +3,7 @@ import { createServer } from "http";
 import { ApolloServer } from "apollo-server-express";
 import { makeExecutableSchema } from "@graphql-tools/schema";
 import { WebSocketServer } from "ws";
-import { useServer } from "graphql-ws/use/ws";// lưu ý path
+import { useServer } from "graphql-ws/use/ws"; // lưu ý path
 import dotenv from "dotenv";
 import jwt from "jsonwebtoken";
 
@@ -61,9 +61,10 @@ wsServer.on("connection", (socket) => {
   // khi nhận pong từ client thì đánh dấu alive
   socket.on("pong", () => {
     const userId = socketUserMap.get(socket);
-    console.log(`🫀 Nhận pong từ client của userId=${userId}, đánh dấu kết nối còn sống`);
+    console.log(
+      `🫀 Nhận pong từ client của userId=${userId}, đánh dấu kết nối còn sống`
+    );
     socket.isAlive = true;
-    
   });
   console.log(`📊 Tổng connection sau khi connect: ${wsServer.clients.size}`);
 });
@@ -73,17 +74,19 @@ const interval = setInterval(() => {
   wsServer.clients.forEach((ws) => {
     if (ws.isAlive === false) {
       const userId = socketUserMap.get(ws);
-      console.log(`💀 Không nhận được pong từ client của userId=${userId}, đóng kết nối`);
+      console.log(
+        `💀 Không nhận được pong từ client của userId=${userId}, đóng kết nối`
+      );
       socketUserMap.delete(ws);
       return ws.terminate();
     }
     ws.isAlive = false;
     ws.ping(); // gửi ping -> chờ pong
-    const userId = socketUserMap.get(ws);   if(userId!="")
-    console.log(`🫀 Gửi ping đến client của userId=${userId}`);
+    const userId = socketUserMap.get(ws);
+    if (userId != "")
+      console.log(`🫀 Gửi ping đến client của userId=${userId}`);
   });
-
-}, 30000); // 30s check một lần
+}, 120000); // 30s check một lần
 
 wsServer.on("close", () => {
   clearInterval(interval);
@@ -115,9 +118,9 @@ useServer(
   },
   wsServer
 );
-const PORT =process.env.PORT || 4000;
+const PORT = process.env.PORT || 4000;
 httpServer.keepAliveTimeout = 120000; // 2 phút
 httpServer.headersTimeout = 125000;
-httpServer.listen(PORT, () => {
-  console.log(`Server chạy tại http://localhost:${PORT}/graphql`);
+httpServer.listen(PORT, "0.0.0.0", () => {
+  console.log(`Server running on port ${PORT}`);
 });
