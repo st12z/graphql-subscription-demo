@@ -3,12 +3,12 @@ import { gql } from "apollo-server-express";
 export const typeDefsUser = gql`
   scalar Date
   type User {
-    id: ID!
-    username: String!
+    id: ID
+    username: String
     avatar: String
     requestFriends: [ID]
     acceptFriends: [ID]
-    status: String!
+    status: String
     isFriends: [ID]
     timeOnl: Date
     timeOff: Date
@@ -38,15 +38,15 @@ export const typeDefsUser = gql`
   }
 
   type UserLoginInfo {
-    id: ID!
-    status: String!
+    id: ID
+    status: String
     timeOnl: Date
     timeOff: Date
   }
 
   type UserLogoutInfo {
-    id: ID!
-    status: String!
+    id: ID
+    status: String
     timeOnl: Date
     timeOff: Date
   }

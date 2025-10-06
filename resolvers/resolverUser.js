@@ -6,6 +6,11 @@ import { EVENTS } from "../pubsub/event.js";
 import { DateScalar } from "../scalar/graphql-scalar-type.js";
 import { ttlAsyncIterator } from "../utils/subscriptionHelper.js";
 import { checkThrottle } from "../utils/rateLimiter.js";
+import { compressPayload, decompressPayload } from "../utils/compress.js";
+import { benchmarkCompression } from "../benmark/monitoring.js";
+import { withSubscriptionLimit } from "../utils/subscriptionLimit.js";
+import { batchPublish, directPublish } from "../benmark/batch.js";
+const USE_BATCH = true; // Chuyển sang dùng batch publish
 export const resolverUser = {
   Date: DateScalar,
   Query: {
@@ -18,10 +23,21 @@ export const resolverUser = {
     // tạo tài khoản người dùng và publish sự kiện người dùng mới được tạo -> trả về cho subscription danh sách
     // người dùng mới nhất
     createUser: async (_, { username, password }) => {
+      console.log("Creating user:", username);
+      const exstUser = await User.findOne({ username });
+      if (exstUser) {
+        throw new Error("Username already exists");
+      }
       const user = new User({ username, password });
       await user.save();
-      const users = await User.find();
-      pubsub.publish(EVENTS.MODEL_CREATED, { getListUsers: users });
+      // const users = await User.find();
+      const compressedUsers = compressPayload([user]);
+      if (USE_BATCH) {
+        batchPublish(pubsub, EVENTS.MODEL_CREATED, compressedUsers);
+      } else {
+        directPublish(pubsub, EVENTS.MODEL_CREATED, compressedUsers);
+      }
+      benchmarkCompression([user]); // Đo nếu không nén data và có nén data
       return user;
     },
     // Thêm bạn bè. Nhận vào 2 tham số userSenđI, userAcceptId.
@@ -83,8 +99,6 @@ export const resolverUser = {
           (id) => id !== user.id
         );
         await Promise.all([user.save(), friend.save()]);
-
-       
 
         pubsub.publish(`${EVENTS.FRIEND_ACCEPTED}.${userSendId}`, {
           friendAccepted: {
@@ -160,7 +174,27 @@ export const resolverUser = {
   Subscription: {
     // lắng nghe sự kiện người dùng mới được tạo và trả về danh sách người dùng mới nhất
     getListUsers: {
-      subscribe: () => pubsub.asyncIterableIterator(EVENTS.MODEL_CREATED),
+      subscribe: withSubscriptionLimit(async (_, __, context) => {
+        console.log(
+          "Subscription getListUsers context userId:",
+          context.userId
+        );
+        return pubsub.asyncIterableIterator(EVENTS.MODEL_CREATED);
+      }),
+      resolve: (payload) => {
+        if (payload.batched) {
+          try {
+            const raw = payload.batched.map(decompressPayload).flat();
+            const decompressed = raw.filter(Boolean);
+            return decompressed;
+          } catch (err) {
+            console.error("Error during decompression:", err);
+          }
+        }
+        const users = decompressPayload(payload.getListUsers);
+        console.log("Received payload for getListUsers:", users);
+        return users;
+      },
     },
     // người nhận lắng nghe sự kiện có lời mời kết bạn mới.
     // Kiểm tra userAcceptId trong payload có khớp với userAcceptId trong args không (Đối số là tham số mình truyển lắng nghe ở applo server)
@@ -186,10 +220,7 @@ export const resolverUser = {
     // người gửi lắng nghe sự kiện lời mời kết bạn được chấp nhận
     friendAccepted: {
       subscribe: async (_, __, context) => {
-        console.log(
-          "Subscription friendAccepted userSendId: ",
-          context.userId
-        );
+        console.log("Subscription friendAccepted userSendId: ", context.userId);
         return pubsub.asyncIterableIterator(
           `${EVENTS.FRIEND_ACCEPTED}.${context.userId}`
         );
@@ -214,7 +245,6 @@ export const resolverUser = {
         checkThrottle(userId);
         // user.id ở đây lấy từ token
         return ttlAsyncIterator(pubsub, EVENTS.USER_LOGIN, 1 * 60 * 1000);
-       
       },
       resolve: (payload, __, context) => {
         // user.id từ token

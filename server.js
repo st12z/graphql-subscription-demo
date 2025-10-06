@@ -47,14 +47,50 @@ const apolloServer = new ApolloServer({
 
 await apolloServer.start();
 apolloServer.applyMiddleware({ app });
+const socketUserMap = new WeakMap();
 
 // WebSocketServer cho graphql-ws
 const wsServer = new WebSocketServer({
   server: httpServer,
   path: "/graphql",
 });
+// Thêm cờ isAlive cho mỗi kết nối
+wsServer.on("connection", (socket) => {
+  socket.isAlive = true;
 
-// gắn graphql-ws
+  // khi nhận pong từ client thì đánh dấu alive
+  socket.on("pong", () => {
+    const userId = socketUserMap.get(socket);
+    console.log(`🫀 Nhận pong từ client của userId=${userId}, đánh dấu kết nối còn sống`);
+    socket.isAlive = true;
+    
+  });
+  console.log(`📊 Tổng connection sau khi connect: ${wsServer.clients.size}`);
+});
+// Tạo interval để ping/pong
+const interval = setInterval(() => {
+  console.log(`📊 Số kết nối hiện tại: ${wsServer.clients.size}`);
+  wsServer.clients.forEach((ws) => {
+    if (ws.isAlive === false) {
+      const userId = socketUserMap.get(ws);
+      console.log(`💀 Không nhận được pong từ client của userId=${userId}, đóng kết nối`);
+      socketUserMap.delete(ws);
+      return ws.terminate();
+    }
+    ws.isAlive = false;
+    ws.ping(); // gửi ping -> chờ pong
+    const userId = socketUserMap.get(ws);   if(userId!="")
+    console.log(`🫀 Gửi ping đến client của userId=${userId}`);
+  });
+
+}, 30000); // 30s check một lần
+
+wsServer.on("close", () => {
+  clearInterval(interval);
+  socketUserMap.clear();
+  console.log("📊 Tổng connection sau khi close: ", wsServer.clients.size);
+});
+
 useServer(
   {
     schema,
@@ -67,13 +103,21 @@ useServer(
       const token = authHeader.replace("Bearer ", "");
       const userId = getUserIdFromToken(token);
       if (!userId) throw new Error("Unauthorized");
-
+      socketUserMap.set(ctx.extra.socket, userId);
       return { userId };
+    },
+    onConnect: (ctx) => {
+      console.log("🔗 Client connected");
+    },
+    onClose: (ctx, code, reason) => {
+      console.log("❌ Client disconnected", code, reason.toString());
     },
   },
   wsServer
 );
 const PORT =process.env.PORT || 4000;
+httpServer.keepAliveTimeout = 120000; // 2 phút
+httpServer.headersTimeout = 125000;
 httpServer.listen(PORT, () => {
   console.log(`Server chạy tại http://localhost:${PORT}/graphql`);
 });

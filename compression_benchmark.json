@@ -1,0 +1,12 @@
+{
+  "no_compression": {
+    "size_bytes": 287,
+    "process_time_ms": 0.028000000049360096
+  },
+  "with_compression": {
+    "compressed_size_bytes": 187,
+    "compression_time_ms": 0.14619999995920807,
+    "decompression_time_ms": 0.08720000006724149,
+    "total_process_time_ms": 0.23340000002644956
+  }
+}
