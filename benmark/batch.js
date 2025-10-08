@@ -1,10 +1,10 @@
 import fs from "fs";
 import path from "path";
-
+import dotenv from "dotenv";
 let batchQueue = [];
 let batchTimeout = null;
-
-const BENCHMARK_FILE = path.resolve("batch_compression.json");
+dotenv.config();
+const BENCHMARK_FILE = path.resolve(`batch_compression_${process.env.PORT}.json`);
 
 // ✅ Hàm đọc dữ liệu hiện tại
 function readBenchmark() {
@@ -34,7 +34,7 @@ function saveBenchmark(result, type = "batch") {
   }
 
   fs.writeFileSync(BENCHMARK_FILE, JSON.stringify(data, null, 2), "utf8");
-  console.log("📊 Benchmark saved to batch_compression.json");
+  console.log(`📊 Benchmark saved to batch_compression_${process.env.PORT}.json`);
 }
 
 /**
@@ -59,6 +59,7 @@ export function batchPublish(pubsub, event, payload, delay = 200) {
 
       saveBenchmark(
         {
+      
           event,
           count: batched.length,
           durationMs: Number(duration),

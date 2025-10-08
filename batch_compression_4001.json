@@ -1,0 +1,47 @@
+{
+  "batch": [
+    {
+      "event": "MODEL_CREATED",
+      "count": 6,
+      "durationMs": 200.07,
+      "timestamp": "2025-10-08T08:45:03.361Z"
+    },
+    {
+      "event": "MODEL_CREATED",
+      "count": 5,
+      "durationMs": 269.23,
+      "timestamp": "2025-10-08T08:45:03.636Z"
+    },
+    {
+      "event": "MODEL_CREATED",
+      "count": 10,
+      "durationMs": 207.4,
+      "timestamp": "2025-10-08T08:45:03.848Z"
+    },
+    {
+      "event": "MODEL_CREATED",
+      "count": 12,
+      "durationMs": 202,
+      "timestamp": "2025-10-08T08:45:04.177Z"
+    },
+    {
+      "event": "MODEL_CREATED",
+      "count": 12,
+      "durationMs": 318.21,
+      "timestamp": "2025-10-08T08:45:04.499Z"
+    },
+    {
+      "event": "MODEL_CREATED",
+      "count": 4,
+      "durationMs": 202.31,
+      "timestamp": "2025-10-08T08:45:04.705Z"
+    },
+    {
+      "event": "MODEL_CREATED",
+      "count": 2,
+      "durationMs": 208.99,
+      "timestamp": "2025-10-08T08:45:05.467Z"
+    }
+  ],
+  "no_batch": []
+}

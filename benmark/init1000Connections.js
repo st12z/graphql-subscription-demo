@@ -5,10 +5,10 @@ import dotenv from "dotenv";
 dotenv.config();
 
 // Tổng số kết nối test
-const TOTAL_CONNECTIONS = 10;
+const TOTAL_CONNECTIONS = 100;
 
 // URL load balancer Nginx
-const WS_URL = "ws://172.28.212.163:8081/graphql";
+const WS_URL = `ws://${process.env.IP}:8081/graphql`;
 
 function createToken(userId) {
   return jwt.sign({ userId }, process.env.JWT_SECRET, { expiresIn: "1h" });

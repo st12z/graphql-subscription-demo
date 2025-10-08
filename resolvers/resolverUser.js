@@ -8,7 +8,7 @@ import { ttlAsyncIterator } from "../utils/subscriptionHelper.js";
 import { checkThrottle } from "../utils/rateLimiter.js";
 import { compressPayload, decompressPayload } from "../utils/compress.js";
 import { withSubscriptionLimit } from "../utils/subscriptionLimit.js";
-import { batchPublish, directPublish } from "../benmark/batch.js";
+import { batchPublish } from "../benmark/batch.js";
 export const resolverUser = {
   Date: DateScalar,
   Query: {
@@ -21,7 +21,6 @@ export const resolverUser = {
     // tạo tài khoản người dùng và publish sự kiện người dùng mới được tạo -> trả về cho subscription danh sách
     // người dùng mới nhất
     createUser: async (_, { username, password }) => {
-      console.log("Creating user:", username);
       const exstUser = await User.findOne({ username });
       if (exstUser) {
         throw new Error("Username already exists");
@@ -31,7 +30,6 @@ export const resolverUser = {
       // const users = await User.find();
       const compressedUsers = compressPayload([user]);
       batchPublish(pubsub, EVENTS.MODEL_CREATED, compressedUsers);
-      directPublish(pubsub, EVENTS.MODEL_CREATED, compressedUsers);
       return user;
     },
     // Thêm bạn bè. Nhận vào 2 tham số userSenđI, userAcceptId.

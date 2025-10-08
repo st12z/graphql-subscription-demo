@@ -57,7 +57,7 @@ const wsServer = new WebSocketServer({
 // Thêm cờ isAlive cho mỗi kết nối
 wsServer.on("connection", (socket) => {
   socket.isAlive = true;
-
+console.log(`📊 Tổng connection sau khi connect: ${wsServer.clients.size}`);
   // khi nhận pong từ client thì đánh dấu alive
   socket.on("pong", () => {
     const userId = socketUserMap.get(socket);
@@ -66,7 +66,7 @@ wsServer.on("connection", (socket) => {
     );
     socket.isAlive = true;
   });
-  console.log(`📊 Tổng connection sau khi connect: ${wsServer.clients.size}`);
+  
 });
 // Tạo interval để ping/pong
 const interval = setInterval(() => {

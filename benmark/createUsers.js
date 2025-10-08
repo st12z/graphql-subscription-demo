@@ -1,11 +1,11 @@
 // scripts/benchmark_create_users.js
 import fetch from "node-fetch";
-
-// URL GraphQL endpoint của bạn (ví dụ localhost:4000)
-const GRAPHQL_ENDPOINT = "http://localhost:4000/graphql";
+import dotenv from "dotenv"
+dotenv.config();
+const GRAPHQL_ENDPOINT =`http://${process.env.IP}:8081/graphql`;
 
 // 📝 Số lượng user cần tạo
-const TOTAL_USERS = 1000;
+const TOTAL_USERS = 100;
 
 // ⚙️ Bật/tắt batch bằng cách set USE_BATCH ở backend (vd: qua biến môi trường)
 

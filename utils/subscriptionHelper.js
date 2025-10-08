@@ -1,5 +1,5 @@
 // TTL Async Iterator
-export function ttlAsyncIterator(pubsub, event, ttlMs = 1 * 60 * 1000) {
+export function ttlAsyncIterator(pubsub, event, ttlMs = 10 * 60 * 1000) {
     const iterator = pubsub.asyncIterableIterator(event);
 
     const timeout = setTimeout(() => {
